@@ -1,8 +1,11 @@
 import pytest
-from pandas import DataFrame, Series
+from pandas import DataFrame
+from sklearn.metrics import brier_score_loss, log_loss
 import numpy as np
+from typing import Dict, Tuple
+from numpy.typing import ArrayLike
 
-from src.tools import create_calib_dataset
+from src.tools import create_calib_dataset, compute_calibration_score
 
 
 class TestCalibDataset:
@@ -44,3 +47,66 @@ class TestCalibDataset:
         Test that the DataFrame's index has been reset to the default integer index.
         """
         assert calib_dataset.index.tolist() == list(range(len(calib_dataset)))
+
+
+class TestCalibrationScore:
+    @pytest.fixture
+    def moke_datas(self) -> Tuple[ArrayLike, Dict[str, ArrayLike]]:
+        """
+        Generate some mock data.
+        """
+        y_test = np.random.randint(0, 2, 10)
+        predictions = {
+            "model1": np.random.rand(10),
+            "model2": np.random.rand(10),
+            "model3": np.random.rand(10),
+        }
+        return y_test, predictions
+
+    @pytest.fixture
+    def calib_scores(
+        self, moke_datas: Tuple[ArrayLike, Dict[str, ArrayLike]]
+    ) -> DataFrame:
+        """
+        Creates the calibration scores DataFrame based on the mock datas.
+        """
+        y_test, predictions = moke_datas
+        return compute_calibration_score(y_test, predictions)
+
+    def test_index(
+        self,
+        calib_scores: DataFrame,
+        moke_datas: Tuple[ArrayLike, Dict[str, ArrayLike]],
+    ):
+        """
+        Test that the index of the calibration scores DataFrame is the same as the keys of the predictions dictionary (i.e. the names of the models).
+        """
+        _, predictions = moke_datas
+        assert set(calib_scores.index) == set(predictions.keys())
+
+    def test_columns(
+        self,
+        calib_scores: DataFrame,
+    ):
+        """
+        Test that the columns of the calibration scores DataFrame (i.e the name of the scores) are the expected ones.
+        """
+        assert set(calib_scores.columns) == set({"Brier score", "Log loss"})
+
+    def test_values(
+        self,
+        calib_scores: DataFrame,
+        moke_datas: Tuple[ArrayLike, Dict[str, ArrayLike]],
+    ):
+        """
+        Test that the values of the calibration scores DataFrame are the expected ones based on the scikit-learn implementation.
+        """
+        y_test, predictions = moke_datas
+        # Check the values
+        for name, y_prob in predictions.items():
+            assert np.isclose(
+                calib_scores.at[name, "Brier score"], brier_score_loss(y_test, y_prob)
+            )
+            assert np.isclose(
+                calib_scores.at[name, "Log loss"], log_loss(y_test, y_prob)
+            )
