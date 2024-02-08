@@ -2,7 +2,7 @@ from numpy.typing import ArrayLike
 from pandas import DataFrame, Series
 from sklearn.base import ClassifierMixin
 from sklearn.metrics import brier_score_loss, log_loss
-from typing import Dict, List
+from typing import Dict, List, Tuple
 from venn_abers import VennAbersCalibrator
 
 from src.VennABERS.VennABERS import ScoresToMultiProbs
@@ -184,7 +184,7 @@ def probabilistic_predictions(
     y_train: ArrayLike,
     y_calib: ArrayLike,
     cross_va: bool = True,
-) -> Dict[str, ArrayLike]:
+) -> Tuple[Dict[str, ArrayLike], ArrayLike, ArrayLike]:
     """Performs probabilistic predictions and calibrations.
 
     Args:
@@ -197,7 +197,7 @@ def probabilistic_predictions(
         cross_va (bool, optional): Whether to perform cross Venn Arbers calibration or not (could be time consuming). Defaults to True.
 
     Returns:
-        Dict[str, ArrayLike]: _description_
+        Tuple[Dict[str, ArrayLike], ArrayLike, ArrayLike]: The calibrated predictions, the non-calibrated probabilities on the calibration set and the non-calibrated probabilities on the test set.
     """
 
     p_cal = estimator.predict_proba(X_calib)

@@ -1,11 +1,22 @@
+from argparse import ArgumentParser
+import numpy as np
+from numpy.typing import ArrayLike
 import pytest
 from pandas import DataFrame
 from sklearn.metrics import brier_score_loss, log_loss
-import numpy as np
+from sklearn.linear_model import LogisticRegression
 from typing import Dict, Tuple
-from numpy.typing import ArrayLike
+from venn_abers import VennAbersCalibrator
 
-from src.tools import create_calib_dataset, compute_calibration_score
+from src.tools import (
+    create_calib_dataset,
+    compute_calibration_score,
+    probabilistic_predictions,
+    inductive_venn_abers,
+    cross_venn_abers,
+)
+
+# note : the tests are splitted in classes, one for each main function of the tools.py file.
 
 
 class TestCalibDataset:
@@ -14,7 +25,7 @@ class TestCalibDataset:
     @pytest.fixture
     def calib_dataset(self):
         """
-        Creates moking datas to be used in the tests.
+        Create moking datas to be used in the tests.
         """
         p_cal = np.random.rand(10)
         y_calib = np.random.randint(0, 2, 10)
@@ -68,7 +79,7 @@ class TestCalibrationScore:
         self, moke_datas: Tuple[ArrayLike, Dict[str, ArrayLike]]
     ) -> DataFrame:
         """
-        Creates the calibration scores DataFrame based on the mock datas.
+        Create the calibration scores DataFrame based on the mock datas.
         """
         y_test, predictions = moke_datas
         return compute_calibration_score(y_test, predictions)
@@ -110,3 +121,74 @@ class TestCalibrationScore:
             assert np.isclose(
                 calib_scores.at[name, "Log loss"], log_loss(y_test, y_prob)
             )
+
+
+class TestProbabilisticPrediction:
+    @pytest.fixture
+    def sets(self):
+        """
+        Create moke train & calib sets.
+        """
+        return {
+            "X_train": np.random.rand(100, 2),
+            "X_calib": np.random.rand(100, 2),
+            "X_test": np.random.rand(100, 2),
+            "y_train": np.random.randint(0, 2, 100),
+            "y_calib": np.random.randint(0, 2, 100),
+        }
+
+    @pytest.fixture
+    def estimator(self, sets: Dict[str, ArrayLike]) -> LogisticRegression:
+        """
+        Create a logistic regression model and fit it on the training set.
+        """
+        estimator = LogisticRegression()
+        estimator.fit(sets["X_train"], sets["y_train"])
+        return estimator
+
+    @pytest.fixture
+    def pred_results(
+        self, estimator: LogisticRegression, sets: Dict[str, ArrayLike]
+    ) -> Tuple[Dict[str, ArrayLike], ArrayLike, ArrayLike]:
+        """
+        Compute the probabilistic predictions and the predictions of the estimator on the test set.
+        """
+        result, p_cal, p_test = probabilistic_predictions(
+            estimator,
+            X_train=sets["X_train"],
+            X_calib=sets["X_calib"],
+            X_test=sets["X_test"],
+            y_train=sets["y_train"],
+            y_calib=sets["y_calib"],
+            cross_va=True,
+        )
+        return result, p_cal, p_test
+
+    def test_keys(
+        self, pred_results: Tuple[Dict[str, ArrayLike], ArrayLike, ArrayLike]
+    ) -> None:
+        """
+        Test that the keys of the result dictionary are the expected ones.
+        """
+        result, _, _ = pred_results
+        assert set(result.keys()) == {
+            "No calibration",
+            "Inductive Venn-ABERS",
+            "Cross Venn-ABERS",
+        }
+
+    def test_results(
+        self,
+        sets: Dict[str, ArrayLike],
+        estimator: LogisticRegression,
+        pred_results: Tuple[Dict[str, ArrayLike], ArrayLike, ArrayLike],
+    ):
+        """
+        Test that the results are the expected ones.
+        """
+        result, p_cal, p_test = pred_results
+        assert np.allclose(
+            result["No calibration"], estimator.predict_proba(sets["X_test"])[:, 1]
+        )
+        assert np.allclose(p_cal, estimator.predict_proba(sets["X_calib"])[:, 1])
+        assert np.allclose(p_test, estimator.predict_proba(sets["X_test"])[:, 1])
