@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "probabilistic-calibration"
+version = "0.1.0"
+description = "A tool used to evaluate the calibration performance of a classifier. Does it predict true probability estimates ?"
+authors = ["CopainMalin <bgautier3800@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+numpy = "^1.26.4"
+matplotlib = "^3.8.2"
+seaborn = "^0.13.2"
+pandas = "^2.2.0"
+scikit-learn = "^1.4.0"
+venn-abers = "^1.4.1"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.0.0"
+pytest-sugar = "^1.0.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
