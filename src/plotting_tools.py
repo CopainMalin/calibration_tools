@@ -16,7 +16,7 @@ def plot_calibration_curve(
     colors: list,
     calibration_scores: DataFrame,
 ) -> None:
-    """Plot the calibration curve of the different techniques.
+    """Plot the calibration curve of the different calibration techniques.
 
     Args:
         ax (Axes): The axis where to plot the calibration curve.
@@ -66,7 +66,7 @@ def plot_uncertainty_distribution(
         color="black",
         fontweight="bold",
     )
-    ax.set_xlabel("Incertitude ($p_1 - p_0)$")
+    ax.set_xlabel("Uncertainty ($p_1 - p_0)$")
     ax.legend()
 
 
