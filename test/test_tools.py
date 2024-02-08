@@ -1,19 +1,15 @@
-from argparse import ArgumentParser
-import numpy as np
+from numpy import random, isclose, allclose
 from numpy.typing import ArrayLike
 import pytest
 from pandas import DataFrame
 from sklearn.metrics import brier_score_loss, log_loss
 from sklearn.linear_model import LogisticRegression
 from typing import Dict, Tuple
-from venn_abers import VennAbersCalibrator
 
 from src.tools import (
     create_calib_dataset,
     compute_calibration_score,
     probabilistic_predictions,
-    inductive_venn_abers,
-    cross_venn_abers,
 )
 
 # note : the tests are splitted in classes, one for each main function of the tools.py file.
@@ -27,10 +23,10 @@ class TestCalibDataset:
         """
         Create moking datas to be used in the tests.
         """
-        p_cal = np.random.rand(10)
-        y_calib = np.random.randint(0, 2, 10)
-        p_test = np.random.rand(10)
-        y_test = np.random.randint(0, 2, 10)
+        p_cal = random.rand(10)
+        y_calib = random.randint(0, 2, 10)
+        p_test = random.rand(10)
+        y_test = random.randint(0, 2, 10)
 
         return create_calib_dataset(p_cal, y_calib, p_test, y_test)
 
@@ -66,11 +62,11 @@ class TestCalibrationScore:
         """
         Generate some mock data.
         """
-        y_test = np.random.randint(0, 2, 10)
+        y_test = random.randint(0, 2, 10)
         predictions = {
-            "model1": np.random.rand(10),
-            "model2": np.random.rand(10),
-            "model3": np.random.rand(10),
+            "model1": random.rand(10),
+            "model2": random.rand(10),
+            "model3": random.rand(10),
         }
         return y_test, predictions
 
@@ -115,12 +111,10 @@ class TestCalibrationScore:
         y_test, predictions = moke_datas
         # Check the values
         for name, y_prob in predictions.items():
-            assert np.isclose(
+            assert isclose(
                 calib_scores.at[name, "Brier score"], brier_score_loss(y_test, y_prob)
             )
-            assert np.isclose(
-                calib_scores.at[name, "Log loss"], log_loss(y_test, y_prob)
-            )
+            assert isclose(calib_scores.at[name, "Log loss"], log_loss(y_test, y_prob))
 
 
 class TestProbabilisticPrediction:
@@ -130,11 +124,11 @@ class TestProbabilisticPrediction:
         Create moke train & calib sets.
         """
         return {
-            "X_train": np.random.rand(100, 2),
-            "X_calib": np.random.rand(100, 2),
-            "X_test": np.random.rand(100, 2),
-            "y_train": np.random.randint(0, 2, 100),
-            "y_calib": np.random.randint(0, 2, 100),
+            "X_train": random.rand(100, 2),
+            "X_calib": random.rand(100, 2),
+            "X_test": random.rand(100, 2),
+            "y_train": random.randint(0, 2, 100),
+            "y_calib": random.randint(0, 2, 100),
         }
 
     @pytest.fixture
@@ -187,8 +181,8 @@ class TestProbabilisticPrediction:
         Test that the results are the expected ones.
         """
         result, p_cal, p_test = pred_results
-        assert np.allclose(
+        assert allclose(
             result["No calibration"], estimator.predict_proba(sets["X_test"])[:, 1]
         )
-        assert np.allclose(p_cal, estimator.predict_proba(sets["X_calib"])[:, 1])
-        assert np.allclose(p_test, estimator.predict_proba(sets["X_test"])[:, 1])
+        assert allclose(p_cal, estimator.predict_proba(sets["X_calib"])[:, 1])
+        assert allclose(p_test, estimator.predict_proba(sets["X_test"])[:, 1])
